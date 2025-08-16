@@ -1,0 +1,19 @@
+# application.yml
+spring:
+  # data:
+  #   mongodb:
+  #     uri: ${MONGODB_URI}
+  # mail:
+  #   host: ${MAIL_HOST}
+  #   port: ${MAIL_PORT:587}
+  #   username: ${MAIL_USER}
+  #   password: ${MAIL_PASS}
+  #   properties.mail.smtp.auth: true
+  #   properties.mail.smtp.starttls.enable: true
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
+cache:
+  type: redis 
+
+spring.redis.url: ${REDIS_URL:redis://localhost:6379}

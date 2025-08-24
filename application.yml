@@ -1,10 +1,8 @@
-# application.yml
 spring:
   data:
     mongodb:
       uri: ${MONGODB_URI}
   mail:
-    enabled: ${MAIL_ENABLED:false}
     host: ${MAIL_HOST:}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
@@ -12,11 +10,12 @@ spring:
     properties:
       mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
       mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
-  
-  server:
-    port: ${PORT:8080}
 
-cache:
-  type: redis
+  cache:
+    type: redis
 
-spring.redis.url: ${REDIS_URL:redis://localhost:6379}
+  redis:
+    url: ${REDIS_URL:redis://localhost:6379}
+
+server:
+  port: ${PORT:8080}

@@ -45,6 +45,7 @@ public class VinylController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vinyl not found"));
         return ResponseEntity.ok(new ResponseJSON<>("Listed one successfully", v));
     }
+    
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

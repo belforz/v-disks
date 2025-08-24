@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,6 +20,7 @@ import com.v_disk.dto.vinyl.VinylCreateDTO;
 import com.v_disk.dto.vinyl.VinylUpdateDTO;
 import com.v_disk.model.Vinyl;
 import com.v_disk.repository.VinylRepository;
+import com.v_disk.utils.ResponseJSON;
 
 import jakarta.validation.Valid;
 
@@ -32,19 +34,21 @@ public class VinylController {
     }
 
     @GetMapping
-    public List<Vinyl> list() {
-        return repo.findAll();
+    public ResponseEntity<ResponseJSON<List<Vinyl>>> list() {
+        List<Vinyl> all = repo.findAll();
+        return ResponseEntity.ok(new ResponseJSON<>("Listed successfully", all));
     }
 
     @GetMapping("/{id}")
-    public Vinyl get(@PathVariable String id) {
-        return repo.findById(id)
+    public ResponseEntity<ResponseJSON<Vinyl>> get(@PathVariable String id) {
+        Vinyl v = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vinyl not found"));
+        return ResponseEntity.ok(new ResponseJSON<>("Listed one successfully", v));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Vinyl create(@RequestBody @Valid VinylCreateDTO dto) {
+    public ResponseEntity<ResponseJSON<Vinyl>> create(@RequestBody @Valid VinylCreateDTO dto) {
         Vinyl v = new Vinyl();
         v.setTitle(dto.title());
         v.setArtist(dto.artist());
@@ -52,11 +56,12 @@ public class VinylController {
         v.setPrice(dto.price());
         v.setCoverPath(dto.coverPath());
         v.setGallery(dto.gallery());
-        return repo.save(v);
+        Vinyl saved = repo.save(v);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseJSON<>("Created Successfully", saved));
     }
 
     @PatchMapping("/{id}")
-    public Vinyl update(@PathVariable String id, @RequestBody @Valid VinylUpdateDTO dto){
+    public ResponseEntity<ResponseJSON<Vinyl>> update(@PathVariable String id, @RequestBody @Valid VinylUpdateDTO dto){
         Vinyl v = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vinyl not found"));
         if(dto.title() !=null) {v.setTitle(dto.title());}
         if(dto.artist() !=null) {v.setArtist(dto.artist());}
@@ -66,16 +71,17 @@ public class VinylController {
         if(dto.gallery() !=null) {v.setGallery(dto.gallery());}
         v.setUpdatedAt(Instant.now());
 
-        return repo.save(v);
+        Vinyl saved = repo.save(v);
+        return ResponseEntity.ok(new ResponseJSON<>("Edited Successfully", saved));
     }
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public void delete(@PathVariable String id) {
+    public ResponseEntity<ResponseJSON<String>> delete(@PathVariable String id) {
         if (!repo.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Vinyl not found");
         }
         repo.deleteById(id);
+        return ResponseEntity.ok(new ResponseJSON<>("Deleted Successfully", id));
     }
 
 }

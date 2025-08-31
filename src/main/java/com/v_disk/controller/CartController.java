@@ -60,4 +60,10 @@ public class CartController {
         cartService.clearCart(userId);
         return ResponseEntity.ok(new ResponseJSON<>("success", "cart_cleared"));
     }
+
+    @PostMapping("/{userId}")
+    public ResponseEntity<ResponseJSON<String>> createCart(@PathVariable String userId, @RequestBody Map<String, Integer> items) {
+        cartService.createCart(userId, items);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseJSON<>("created", "cart_created"));
+    }
 }

@@ -1,22 +1,28 @@
 package com.v_disk.controller;
 
+import java.util.Collections;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.v_disk.service.CheckoutService;
 import com.v_disk.utils.ResponseJSON;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+
 @RestController
 @RequestMapping("/api/checkout")
+@Validated
 public class CheckoutController {
 
     private final CheckoutService checkoutService;
@@ -25,19 +31,33 @@ public class CheckoutController {
         this.checkoutService = checkoutService;
     }
 
-    @PostMapping
-    public ResponseEntity<ResponseJSON<String>> save(@RequestBody Map<String, Object> body) {
-        // Expect at least a paymentId and optional payload
-        Object pid = body.get("paymentId");
-        if (pid == null) {
-            return ResponseEntity.badRequest().body(new ResponseJSON<>("error", "missing paymentId"));
+    public static class CheckoutRequestDTO {
+        @NotBlank(message = "paymentId is required")
+        private String paymentId;
+        private Map<String, String> payload;
+
+        public String getPaymentId() {
+            return paymentId;
         }
-        String paymentId = String.valueOf(pid);
-        Object payloadObj = body.get("payload");
-        Map<String, String> payload = Map.of();
-        if (payloadObj instanceof Map) {
-            payload = ((Map<?, ?>) payloadObj).entrySet().stream()
-                .collect(Collectors.toMap(e -> String.valueOf(e.getKey()), e -> String.valueOf(e.getValue())));
+
+        public void setPaymentId(String paymentId) {
+            this.paymentId = paymentId;
+        }
+
+        public Map<String, String> getPayload() {
+            return payload;
+        }
+
+        public void setPayload(Map<String, String> payload) {
+            this.payload = payload;
+        }
+    }
+
+    @PostMapping
+    public ResponseEntity<ResponseJSON<String>> save(@RequestParam String paymentId, @Valid @RequestBody CheckoutRequestDTO body) {
+        Map<String, String> payload = body.getPayload();
+        if (payload == null) {
+            payload = Collections.emptyMap();
         }
         checkoutService.save(paymentId, payload);
         return ResponseEntity.ok(new ResponseJSON<>("success", paymentId));

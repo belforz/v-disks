@@ -63,7 +63,6 @@ public class OrderController {
         Order o = new Order();
         o.setUserId(dto.userId());
         o.setVinylIds(dto.vinylIds());
-        // Ensure qt is set: prefer DTO value, otherwise infer from vinylIds size, fallback to 0
         if (dto.qt() != null) {
             o.setQt(dto.qt());
         } else if (dto.vinylIds() != null) {

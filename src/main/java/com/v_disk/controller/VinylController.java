@@ -24,6 +24,7 @@ import com.v_disk.repository.VinylRepository;
 import com.v_disk.utils.ResponseJSON;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.PageRequest;
 
 @RestController
 @RequestMapping("/api/vinyls")
@@ -35,8 +36,9 @@ public class VinylController {
     }
 
     @GetMapping
-    public ResponseEntity<ResponseJSON<List<Vinyl>>> list() {
-        List<Vinyl> all = repo.findAll();
+    public ResponseEntity<ResponseJSON<List<Vinyl>>> list(@RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "0") int offset) {
+        List<Vinyl> all = repo.findAll(PageRequest.of(offset / limit, limit)).getContent();
         return ResponseEntity.ok(new ResponseJSON<>("Listed successfully", all));
     }
 

@@ -17,8 +17,11 @@ public class Vinyl {
     private Integer stock;
     private String coverPath;
     private List<String> gallery;
+    private Boolean isPrincipal = Boolean.FALSE;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
+
+
 
     public String getId() {
         return id;
@@ -87,6 +90,13 @@ public class Vinyl {
     public Instant setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
         return updatedAt;
+    }
+
+     public Boolean getIsPrincipal() {
+        return isPrincipal;
+    }
+    public void setIsPrincipal(Boolean isPrincipal) {
+        this.isPrincipal = isPrincipal;
     }
 
 }

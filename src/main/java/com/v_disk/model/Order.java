@@ -10,7 +10,7 @@ public class Order {
     private String id;
     private String userId;
     private List<String> vinylIds;
-    private int qt;
+    private Integer qt;
     private String paymentId;
     private Boolean isPaymentConfirmed;
     private String orderStatus;
@@ -29,7 +29,7 @@ public class Order {
        return vinylIds;
    }
 
-   public int getQt() {
+   public Integer getQt() {
        return qt;
    }
 
@@ -65,7 +65,7 @@ public class Order {
        this.vinylIds = vinylIds;
    }
 
-   public void setQt(int qt) {
+   public void setQt(Integer qt) {
        this.qt = qt;
    }
 

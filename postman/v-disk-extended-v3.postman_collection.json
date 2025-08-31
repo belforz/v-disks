@@ -1,0 +1,29 @@
+{
+  "info": {
+    "name": "V-Disks Email Tests v3",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Email endpoint tests: public, test-send (single recipient), generic send, change-password (creates token in DB and sends email)."
+  },
+  "item": [
+    {
+      "name": "Mail - public",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/mail/public" },
+      "event": [{ "listen": "test", "script": { "exec": [ "pm.test('mail public 200', function(){ pm.response.to.have.status(200); });" ] }}]
+    },
+    {
+      "name": "Mail - test send",
+      "request": { "method": "POST", "url": "{{baseUrl}}/api/mail/test?to={{testEmail}}" },
+      "event": [{ "listen": "test", "script": { "exec": [ "pm.test('mail test 200 or 503', function(){ pm.expect([200,503]).to.include(pm.response.code); });" ] }}]
+    },
+    {
+      "name": "Mail - generic send",
+      "request": { "method": "POST", "url": "{{baseUrl}}/api/mail/send?to={{testEmail}}&subject=Smoke+Subject&body=Hello+from+smoke+test" },
+      "event": [{ "listen": "test", "script": { "exec": [ "pm.test('mail send 200 or 503', function(){ pm.expect([200,503]).to.include(pm.response.code); });" ] }}]
+    },
+    {
+      "name": "Mail - change-password (creates token)",
+      "request": { "method": "POST", "url": "{{baseUrl}}/api/mail/change-password?to={{testEmail}}" },
+      "event": [{ "listen": "test", "script": { "exec": [ "pm.test('change-password returns 200 or 404 or 503', function(){ pm.expect([200,404,503]).to.include(pm.response.code); });" ] }}]
+    }
+  ]
+}

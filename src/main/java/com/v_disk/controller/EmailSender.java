@@ -1,12 +1,26 @@
 package com.v_disk.controller;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+import com.v_disk.model.EmailVerificationToken;
+import com.v_disk.model.User;
+import com.v_disk.repository.EmailVerificationTokenRepository;
+import com.v_disk.repository.UserRepository;
 import com.v_disk.utils.ResponseJSON;
 
 @RestController
@@ -14,6 +28,24 @@ import com.v_disk.utils.ResponseJSON;
 public class EmailSender {
     @Autowired(required = false)
     private JavaMailSender mailSender;
+
+    private final UserRepository repo;
+    private final EmailVerificationTokenRepository tokenRepo;
+    private final String frontendUrl;
+    private final long tokenTtlSeconds;
+    private final String mailFrom;
+
+    public EmailSender(UserRepository repo,
+            EmailVerificationTokenRepository tokenRepo,
+            @Value("${app.frontend.url:http://localhost:8080/reset-password.html}") String frontendUrl,
+            @Value("${app.password_reset.ttl_seconds:3600}") long tokenTtlSeconds,
+            @Value("${spring.mail.username:no-reply@v-disk.local}") String mailFrom) {
+        this.repo = repo;
+        this.tokenRepo = tokenRepo;
+        this.frontendUrl = frontendUrl;
+        this.tokenTtlSeconds = tokenTtlSeconds;
+        this.mailFrom = mailFrom;
+    }
 
     @GetMapping("/public")
     public ResponseEntity<ResponseJSON<String>> publicTest() {
@@ -36,7 +68,8 @@ public class EmailSender {
     }
 
     @PostMapping("/send")
-    public ResponseEntity<ResponseJSON<String>> sendEmail(@RequestParam String to, @RequestParam String subject, @RequestParam String body) {
+    public ResponseEntity<ResponseJSON<String>> sendEmail(@RequestParam String to, @RequestParam String subject,
+            @RequestParam String body) {
         if (mailSender == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(new ResponseJSON<>("error", "Mail service not configured"));
@@ -54,6 +87,44 @@ public class EmailSender {
                     .body(new ResponseJSON<>("error", "Error sending email: " + e.getMessage()));
         }
 
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ResponseJSON<String>> sendEmailToClient(@RequestParam String to) {
+        if (mailSender == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(new ResponseJSON<>("error", "Mail service not configured"));
+        }
+        User user = repo.findByEmail(to).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ResponseJSON<>("error", "User not found"));
+        }
+        
+        try {
+            tokenRepo.deleteByUserId(user.getId());
+        } catch (Exception ignored) {
+        }
+
+        
+        String token = UUID.randomUUID().toString();
+        EmailVerificationToken t = new EmailVerificationToken();
+        t.setUserId(user.getId());
+        t.setToken(token);
+        t.setExpiresAt(Instant.now().plusSeconds(tokenTtlSeconds));
+        tokenRepo.save(t);
+
+        String encoded = URLEncoder.encode(token, StandardCharsets.UTF_8);
+        String link = frontendUrl + "?token=" + encoded;
+
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setTo(user.getEmail());
+        msg.setSubject("Alteração de Senha");
+        msg.setText("Clique no link abaixo para alterar sua senha:\n\n" + link
+                + "\n\nSe você não solicitou, ignore este e-mail.");
+        msg.setFrom(mailFrom);
+        mailSender.send(msg);
+        return ResponseEntity.ok(new ResponseJSON<>("success", "Email de alteração de senha enviado"));
     }
 
 }

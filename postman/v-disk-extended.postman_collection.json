@@ -1,0 +1,92 @@
+{
+  "info": {
+    "name": "V-Disks Extended Smoke Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Additional smoke tests: orders/payment approve, cart flows, admin mutates, security negatives, checkout marker tests (requires Redis). Uses same environment variables as main collection."
+  },
+  "item": [
+    {
+      "name": "Auth - Login (reuse token)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"{{testEmail}}\", \"password\": \"{{testPassword}}\" }"
+        },
+        "url": "{{baseUrl}}/api/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": [
+            "pm.test('login 200', function(){ pm.response.to.have.status(200); });",
+            "var json = pm.response.json();",
+            "if (json && json.data && json.data.token) { pm.environment.set('token', json.data.token); pm.test('token saved', function(){ pm.expect(json.data.token).to.be.a('string'); }); }"
+          ] }
+        }
+      ]
+    },
+    {
+      "name": "Security - No token should 401",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/orders"
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('no token returns 401 or 403', function(){ pm.expect([401,403]).to.include(pm.response.code); });"
+      ] }}]
+    },
+    {
+      "name": "Orders - Create order (auth)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+        "body": { "mode": "raw", "raw": "{ \"userId\": \"{{testUserId}}\", \"vinylIds\": [\"{{testVinylId}}\"] }" },
+        "url": "{{baseUrl}}/api/orders"
+      },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('order create 201 or 403', function(){ pm.expect([201,403]).to.include(pm.response.code); });",
+        "if (pm.response.code===201){ var j=pm.response.json(); pm.environment.set('lastOrderId', j.data.id); pm.test('qt not null', function(){ pm.expect(j.data.qt).to.not.be.oneOf([null, undefined]); }); }"
+      ] }}]
+    },
+    {
+      "name": "Orders - Patch order paymentId",
+      "request": { "method": "PATCH", "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ], "body": { "mode": "raw", "raw": "{ \"paymentId\": \"{{paymentId}}\" }" }, "url": "{{baseUrl}}/api/orders/{{lastOrderId}}" },
+      "event": [{ "listen": "test", "script": { "exec": [ "pm.test('patch order 200 or 404 or 403', function(){ pm.expect([200,404,403]).to.include(pm.response.code); });" ] }}]
+    },
+    {
+      "name": "Orders - Approve payment (happy path)",
+      "request": { "method": "POST", "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ], "url": "{{baseUrl}}/api/orders/payment/{{paymentId}}/approve" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('approve returns 200 or 403 or 404', function(){ pm.expect([200,403,404]).to.include(pm.response.code); });",
+        "if (pm.response.code===200){ var j=pm.response.json(); pm.test('order confirmed', function(){ pm.expect(j.data.orderStatus).to.eql('CONFIRMED'); }); }"
+      ] }}]
+    },
+    {
+      "name": "Checkout - Marker concurrency (best-effort)",
+      "request": { "method": "POST", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{ \"paymentId\": \"{{paymentId}}\", \"payload\": { \"k\": \"v\" } }" }, "url": "{{baseUrl}}/api/checkout" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('marker endpoint optional', function(){ pm.expect([200,404,403]).to.include(pm.response.code); });"
+      ] }}]
+    },
+    {
+      "name": "Cart - add item",
+      "request": { "method": "POST", "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{ \"quantity\": 1 }" }, "url": "{{baseUrl}}/api/cart/{{testUserId}}/item/{{testVinylId}}" },
+  "event": [{ "listen": "test", "script": { "exec": [ "pm.test('cart add 200, 201 or 403', function(){ pm.expect([200,201,403]).to.include(pm.response.code); });" ] }}]
+    },
+    {
+      "name": "Users - Patch as admin (if token is admin)",
+      "request": { "method": "PATCH", "header": [ { "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{ \"name\": \"Smoke PM Updated\" }" }, "url": "{{baseUrl}}/api/users/{{testUserId}}" },
+      "event": [{ "listen": "test", "script": { "exec": [ "pm.test('user patch 200 or 403', function(){ pm.expect([200,403]).to.include(pm.response.code); });" ] }}]
+    },
+    {
+      "name": "Security - invalid token should fail",
+      "request": { "method": "GET", "header": [ { "key": "Authorization", "value": "Bearer invalid-token-for-test" } ], "url": "{{baseUrl}}/api/auth/verify?token=invalid-token-for-test" },
+      "event": [{ "listen": "test", "script": { "exec": [ "pm.test('invalid verify returns error', function(){ pm.expect([400,404,403,401]).to.include(pm.response.code); });" ] }}]
+    }
+  ]
+}

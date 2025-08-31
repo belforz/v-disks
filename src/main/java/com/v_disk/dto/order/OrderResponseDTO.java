@@ -7,7 +7,7 @@ public record OrderResponseDTO(
     String id,
     String userId,
     List<String> vinylIds,
-    int qt,
+    Integer qt,
     String paymentId,
     String orderStatus,
     Boolean isPaymentConfirmed,

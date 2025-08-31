@@ -63,18 +63,34 @@ public class OrderController {
         Order o = new Order();
         o.setUserId(dto.userId());
         o.setVinylIds(dto.vinylIds());
+        // Ensure qt is set: prefer DTO value, otherwise infer from vinylIds size, fallback to 0
+        if (dto.qt() != null) {
+            o.setQt(dto.qt());
+        } else if (dto.vinylIds() != null) {
+            o.setQt(dto.vinylIds().size());
+        } else {
+            o.setQt(0);
+        }
+        // Optional fields from DTO
+        if (dto.paymentId() != null) o.setPaymentId(dto.paymentId());
+        if (dto.isPaymentConfirmed() != null) o.setIsPaymentConfirmed(dto.isPaymentConfirmed());
+        if (dto.orderStatus() != null) o.setOrderStatus(dto.orderStatus());
         o.setCreatedAt(Instant.now());
         Order saved = repo.save(o);
         OrderResponseDTO resp = new OrderResponseDTO(saved.getId(), saved.getUserId(), saved.getVinylIds(), saved.getQt(), saved.getPaymentId(), saved.getOrderStatus(), saved.getIsPaymentConfirmed(), saved.getCreatedAt(), saved.getUpdatedAt());
     return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseJSON<>("created", resp));
     }
-
+    
     @PatchMapping("/{id}")
     public ResponseEntity<ResponseJSON<OrderResponseDTO>> update(@PathVariable String id, @RequestBody @Valid OrderUpdateDTO dto) {
         Order o = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-        if (dto.userId() != null) o.setUserId(dto.userId());
-        if (dto.vinylIds() != null) o.setVinylIds(dto.vinylIds());
-        o.setUpdatedAt(Instant.now());
+    if (dto.userId() != null) o.setUserId(dto.userId());
+    if (dto.vinylIds() != null) o.setVinylIds(dto.vinylIds());
+    if (dto.paymentId() != null) o.setPaymentId(dto.paymentId());
+    if (dto.orderStatus() != null) o.setOrderStatus(dto.orderStatus());
+    if (dto.isPaymentConfirmed() != null) o.setIsPaymentConfirmed(dto.isPaymentConfirmed());
+    if (dto.qt() != null && dto.qt() > 0) o.setQt(dto.qt());
+    o.setUpdatedAt(Instant.now());
         Order saved = repo.save(o);
     return ResponseEntity.ok(new ResponseJSON<>("success", new OrderResponseDTO(saved.getId(), saved.getUserId(), saved.getVinylIds(), saved.getQt(), saved.getPaymentId(), saved.getOrderStatus(), saved.getIsPaymentConfirmed(), saved.getCreatedAt(), saved.getUpdatedAt())));
     }

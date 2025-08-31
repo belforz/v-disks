@@ -9,5 +9,6 @@ public record VinylUpdateDTO(
     BigDecimal price,
     Integer stock,
     String coverPath,
-    List<String> gallery
+    List<String> gallery,
+    Boolean isPrincipal
 ) {}

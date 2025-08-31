@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 @Service
 public class CartService {
 
+    // Redis for bag purposes
+
     private final StringRedisTemplate redis;
 
     private final Duration cartTtl;

@@ -19,3 +19,10 @@ spring:
 
 server:
   port: ${PORT:8080}
+  
+jwt:
+  secret:
+    base64: ${JWT_SECRET}
+  issuer: ${JWT_ISSUER:v-disk}
+  ttl:
+    seconds: ${JWT_TTL_SECONDS:3600}

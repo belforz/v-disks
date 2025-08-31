@@ -5,7 +5,7 @@ import java.util.List;
 public record OrderUpdateDTO (
     String userId,
     List<String> vinylIds,
-    int qt,
+    Integer qt,
     String paymentId,
     String orderStatus,
     Boolean isPaymentConfirmed

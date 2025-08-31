@@ -14,6 +14,7 @@ public record VinylCreateDTO(
     @NotNull @DecimalMin("0.0") BigDecimal price,
     @NotNull @Min(0) Integer stock,
     @NotBlank String coverPath,
-    List<@NotBlank String> gallery
+    List<@NotBlank String> gallery,
+    Boolean isPrincipal
 ) {}
 

@@ -37,15 +37,15 @@ if (Get-Command newman -ErrorAction SilentlyContinue) {
     $headers = @{ 'Accept' = 'application/json' }
 if ($token) { $headers['Authorization'] = "Bearer $token" }
 
-## Skipping public/test/send to focus only on change-password flow
-# Write-Host "GET $baseUrl/api/mail/public"
-# try { $p = Invoke-RestMethod -Method Get -Uri ("$baseUrl/api/mail/public") -Headers $headers -ErrorAction Stop; Write-Host ($p | ConvertTo-Json -Depth 5) } catch { Write-Warning "public mail failed: $($_.Exception.Message)" }
-#
-# Write-Host "POST $baseUrl/api/mail/test?to=$testEmail"
-# try { $t = Invoke-RestMethod -Method Post -Uri ("$baseUrl/api/mail/test?to=$testEmail") -Headers $headers -ErrorAction Stop; Write-Host ($t | ConvertTo-Json -Depth 5) } catch { Write-Warning "mail test failed: $($_.Exception.Message)" }
-#
-# Write-Host "POST $baseUrl/api/mail/send?to=$testEmail&subject=Smoke+Subject&body=Hello"
-# try { $s = Invoke-RestMethod -Method Post -Uri ("$baseUrl/api/mail/send?to=$testEmail&subject=Smoke+Subject&body=Hello") -Headers $headers -ErrorAction Stop; Write-Host ($s | ConvertTo-Json -Depth 5) } catch { Write-Warning "mail send failed: $($_.Exception.Message)" }
-#
+# Skipping public/test/send to focus only on change-password flow
+Write-Host "GET $baseUrl/api/mail/public"
+try { $p = Invoke-RestMethod -Method Get -Uri ("$baseUrl/api/mail/public") -Headers $headers -ErrorAction Stop; Write-Host ($p | ConvertTo-Json -Depth 5) } catch { Write-Warning "public mail failed: $($_.Exception.Message)" }
+
+Write-Host "POST $baseUrl/api/mail/test?to=$testEmail"
+try { $t = Invoke-RestMethod -Method Post -Uri ("$baseUrl/api/mail/test?to=$testEmail") -Headers $headers -ErrorAction Stop; Write-Host ($t | ConvertTo-Json -Depth 5) } catch { Write-Warning "mail test failed: $($_.Exception.Message)" }
+
+Write-Host "POST $baseUrl/api/mail/send?to=$testEmail&subject=Smoke+Subject&body=Hello"
+try { $s = Invoke-RestMethod -Method Post -Uri ("$baseUrl/api/mail/send?to=$testEmail&subject=Smoke+Subject&body=Hello") -Headers $headers -ErrorAction Stop; Write-Host ($s | ConvertTo-Json -Depth 5) } catch { Write-Warning "mail send failed: $($_.Exception.Message)" }
+
 Write-Host "POST $baseUrl/api/mail/change-password?to=$testEmail"
 try { $c = Invoke-RestMethod -Method Post -Uri ("$baseUrl/api/mail/change-password?to=$testEmail") -Headers $headers -ErrorAction Stop; Write-Host ($c | ConvertTo-Json -Depth 5) } catch { Write-Warning "change-password failed: $($_.Exception.Message)" }

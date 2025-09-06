@@ -3,9 +3,12 @@ package com.v_disk.controller;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -32,6 +35,8 @@ import jakarta.validation.constraints.NotBlank;
 @RequestMapping("/api/auth")
 public class AuthController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
     private final EmailVerificationService emailVerificationService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -40,7 +45,7 @@ public class AuthController {
     private final com.v_disk.repository.EmailVerificationTokenRepository tokenRepository;
 
     public AuthController(
-            EmailVerificationService emailVerificationService, 
+            EmailVerificationService emailVerificationService,
             AuthenticationManager authenticationManager,
             JwtService jwtService,
             UserRepository userRepository,
@@ -53,66 +58,165 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
         this.tokenRepository = tokenRepository;
     }
-    
+
     public static class LoginRequest {
         @NotBlank(message = "Email is required")
         @Email(message = "Email must be valid")
         private String email;
-        
+
         @NotBlank(message = "Password is required")
         private String password;
-        
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
     }
-    
+
     public static class TokenResponse {
         private final String token;
         private final String type = "Bearer";
-        
-        public TokenResponse(String token) {
+        private final UserPublic user;
+
+        public TokenResponse(String token, UserPublic user) {
             this.token = token;
+            this.user = user;
         }
-        
-        public String getToken() { return token; }
-        public String getType() { return type; }
+
+        public String getToken() {
+            return token;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public UserPublic getUser() {
+            return user;
+        }
     }
 
-    @PostMapping({"/", "/login"})
+    public static class UserPublic {
+        private final String id;
+        private final String email;
+        private final String name;
+        private final Object roles;
+
+        public UserPublic(User u) {
+            this.id = u.getId();
+            this.email = u.getEmail();
+            this.name = u.getName();
+            this.roles = u.getRoles();
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Object getRoles() {
+            return roles;
+        }
+    }
+
+    @PostMapping("/login")
     public ResponseEntity<ResponseJSON<TokenResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            // Authenticate the user
+            logger.info("Login attempt for {}", loginRequest.getEmail());
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
-            );
-            
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+
+            logger.info("Authentication successful for {}", loginRequest.getEmail());
             SecurityContextHolder.getContext().setAuthentication(authentication);
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            
-            // Find user to get additional info
+
             User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-            
-            // Generate JWT token with user details
+                    .orElseThrow(() -> new RuntimeException("User not found after authentication"));
+
             Map<String, Object> claims = new HashMap<>();
             claims.put("userId", user.getId());
             claims.put("roles", user.getRoles());
             claims.put("name", user.getName());
-            
+
             String jwt = jwtService.generateToken(user.getEmail(), claims);
-            
-            return ResponseEntity.ok(new ResponseJSON<>("success", new TokenResponse(jwt)));
+            if (jwt == null || jwt.isBlank()) {
+                logger.error("JWT generation returned null/empty for user {}", user.getEmail());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ResponseJSON<>("error", null));
+            }
+
+            logger.info("JWT generated for user {}", user.getEmail());
+            return ResponseEntity.ok(new ResponseJSON<>("success", new TokenResponse(jwt, new UserPublic(user))));
+        } catch (BadCredentialsException e) {
+            logger.warn("Bad credentials for {}", loginRequest.getEmail());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ResponseJSON<>("invalid_credentials", null));
         } catch (AuthenticationException e) {
-            return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(new ResponseJSON<TokenResponse>("error", null));
+            logger.warn("Authentication failed for {}: {}", loginRequest.getEmail(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ResponseJSON<>("error", null));
+        } catch (Exception e) {
+            logger.error("Unexpected error during login for {}: {}", loginRequest.getEmail(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseJSON<>("error", null));
         }
     }
 
+    // @PostMapping({"/", "/login"})
+    // public ResponseEntity<ResponseJSON<TokenResponse>> login(@Valid @RequestBody
+    // LoginRequest loginRequest) {
+    // try {
+    // // Authenticate the user
+    // Authentication authentication = authenticationManager.authenticate(
+    // new UsernamePasswordAuthenticationToken(loginRequest.getEmail(),
+    // loginRequest.getPassword())
+    // );
+
+    // SecurityContextHolder.getContext().setAuthentication(authentication);
+    // UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+    // // Find user to get additional info
+    // User user = userRepository.findByEmail(userDetails.getUsername())
+    // .orElseThrow(() -> new RuntimeException("User not found"));
+
+    // // Generate JWT token with user details
+    // Map<String, Object> claims = new HashMap<>();
+    // claims.put("userId", user.getId());
+    // claims.put("roles", user.getRoles());
+    // claims.put("name", user.getName());
+
+    // String jwt = jwtService.generateToken(user.getEmail(), claims);
+
+    // return ResponseEntity.ok(new ResponseJSON<>("success", new
+    // TokenResponse(jwt)));
+    // } catch (AuthenticationException e) {
+    // return ResponseEntity
+    // .status(HttpStatus.UNAUTHORIZED)
+    // .body(new ResponseJSON<TokenResponse>("error", null));
+    // }
+    // }
+
     @PostMapping("/verify-email")
-    public ResponseEntity<ResponseJSON<String>> verifyEmail(@RequestParam(required = false) String token, @RequestBody(required = false) Map<String, String> body) {
+    public ResponseEntity<ResponseJSON<String>> verifyEmail(@RequestParam(required = false) String token,
+            @RequestBody(required = false) Map<String, String> body) {
         String t = token;
         if ((t == null || t.isBlank()) && body != null) {
             t = body.get("token");
@@ -129,7 +233,8 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.GONE).body(new ResponseJSON<>("error", "expired"));
             case NOT_FOUND:
             default:
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseJSON<>("error", "invalid_or_not_found"));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ResponseJSON<>("error", "invalid_or_not_found"));
         }
     }
 
@@ -137,17 +242,30 @@ public class AuthController {
         private String token;
         private String newPassword;
 
-        public String getToken() { return token; }
-        public void setToken(String token) { this.token = token; }
-        public String getNewPassword() { return newPassword; }
-        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+        public String getToken() {
+            return token;
+        }
+
+        public void setToken(String token) {
+            this.token = token;
+        }
+
+        public String getNewPassword() {
+            return newPassword;
+        }
+
+        public void setNewPassword(String newPassword) {
+            this.newPassword = newPassword;
+        }
     }
 
     @PostMapping("/change-password")
     // Route for changing password
-    public ResponseEntity<ResponseJSON<String>> changePassword(@RequestParam(required = false) String token, @RequestBody(required = false) ChangePasswordRequest body) {
+    public ResponseEntity<ResponseJSON<String>> changePassword(@RequestParam(required = false) String token,
+            @RequestBody(required = false) ChangePasswordRequest body) {
         String t = token;
-        if ((t == null || t.isBlank()) && body != null) t = body.getToken();
+        if ((t == null || t.isBlank()) && body != null)
+            t = body.getToken();
         if (t == null || t.isBlank()) {
             return ResponseEntity.badRequest().body(new ResponseJSON<>("error", "token_required"));
         }
@@ -159,11 +277,15 @@ public class AuthController {
         // Search token
         var opt = emailVerificationService.findByToken(t);
         if (opt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseJSON<>("error", "invalid_or_not_found"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ResponseJSON<>("error", "invalid_or_not_found"));
         }
         var tokenObj = opt.get();
         if (tokenObj.getExpiresAt() == null || tokenObj.getExpiresAt().isBefore(java.time.Instant.now())) {
-            try { tokenRepository.delete(tokenObj); } catch (Exception ignored) {}
+            try {
+                tokenRepository.delete(tokenObj);
+            } catch (Exception ignored) {
+            }
             return ResponseEntity.status(HttpStatus.GONE).body(new ResponseJSON<>("error", "expired"));
         }
         var ou = userRepository.findById(tokenObj.getUserId());
@@ -174,7 +296,10 @@ public class AuthController {
         var u = ou.get();
         u.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(u);
-        try { tokenRepository.deleteByUserId(u.getId()); } catch (Exception ignored) {}
+        try {
+            tokenRepository.deleteByUserId(u.getId());
+        } catch (Exception ignored) {
+        }
         return ResponseEntity.ok(new ResponseJSON<>("success", "password_changed"));
     }
 }

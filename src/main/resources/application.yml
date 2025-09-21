@@ -22,16 +22,16 @@ server:
   
 jwt:
   secret:
-    base64: ${JWT_SECRET}
+    base64: ${JWT_SECRET_BASE64:${JWT_SECRET:}}
   issuer: ${JWT_ISSUER:v-disk}
   ttl:
     seconds: ${JWT_TTL_SECONDS:3600}
 
 front:
-  baseurl: 'http://localhost:5173'
+  baseurl: ${APP_FRONT_BASE_URL:http://localhost:5173}
 
 app:
   front:
-    base-url: 'http://localhost:5173'
-    verify-path: '/verify-email'
-    reset-path: '/reset-password'
+    base-url: ${APP_FRONT_BASE_URL:http://localhost:5173}
+    verify-path: ${APP_FRONT_VERIFY_PATH:/verify-email}
+    reset-path: ${APP_FRONT_RESET_PATH:/reset-password}

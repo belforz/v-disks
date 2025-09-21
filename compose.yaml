@@ -5,18 +5,3 @@ services:
       - "6379:6379"
     container_name: redis-v-disk-api 
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: vdisk/app:latest
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    environment:
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - redis
-    container_name: vdisk-app
-    restart: unless-stopped

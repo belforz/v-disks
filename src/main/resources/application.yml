@@ -2,6 +2,8 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI}
+    redis:
+      url: ${REDIS_URL:}
   mail:
     host: ${MAIL_HOST:}
     port: ${MAIL_PORT:587}
@@ -13,9 +15,8 @@ spring:
 
   cache:
     type: redis
-
   redis:
-    url: ${REDIS_URL:redis://localhost:6379}
+    url: ${REDIS_URL:}
 
 server:
   port: ${PORT:8080}

@@ -55,15 +55,46 @@ public class EmailVerificationService {
     }
 
     public void sendVerificationEmail(User user, EmailVerificationToken token) {
-        if (mailSender == null) return; 
+        if (mailSender == null) return;
         SimpleMailMessage msg = new SimpleMailMessage();
         msg.setTo(user.getEmail());
         msg.setFrom(fromAddress);
         msg.setSubject("Confirme seu e-mail");
-    String link = UriComponentsBuilder.fromUriString(frontendBaseUrl)
-        .path(verifyPath)
-        .queryParam("token", token.getToken())
-        .toUriString();
+
+        // Normalize and build the verification link safely.
+        // Cases to handle:
+        //  - verifyPath is an absolute URL (starts with http/https) -> use it directly
+        //  - verifyPath is an absolute path (/verify-email) -> combine with frontendBaseUrl without duplicating slashes
+        //  - verifyPath accidentally contains the frontendBaseUrl already -> avoid double prefixing
+        String link;
+        try {
+            String trimmedVerify = verifyPath == null ? "" : verifyPath.trim();
+            String trimmedBase = frontendBaseUrl == null ? "" : frontendBaseUrl.trim();
+
+            // If verifyPath looks like a full URL, use it directly but ensure token param is appended
+            if (trimmedVerify.matches("(?i)^https?://.*")) {
+                link = UriComponentsBuilder.fromUriString(trimmedVerify)
+                    .queryParam("token", token.getToken())
+                    .toUriString();
+            } else {
+                // If verifyPath already contains the base URL, strip it out to avoid duplication
+                if (!trimmedBase.isEmpty() && trimmedVerify.startsWith(trimmedBase)) {
+                    trimmedVerify = trimmedVerify.substring(trimmedBase.length());
+                }
+                // Ensure single slash between base and path
+                String sep = "";
+                if (!trimmedBase.endsWith("/") && !trimmedVerify.startsWith("/")) sep = "/";
+                if (trimmedBase.endsWith("/") && trimmedVerify.startsWith("/")) trimmedVerify = trimmedVerify.substring(1);
+
+                link = UriComponentsBuilder.fromUriString(trimmedBase + sep + trimmedVerify)
+                    .queryParam("token", token.getToken())
+                    .toUriString();
+            }
+        } catch (Exception e) {
+            // Fall back to a simple concatenation in unlikely error cases
+            link = frontendBaseUrl + (verifyPath.startsWith("/") ? "" : "/") + verifyPath + "?token=" + token.getToken();
+        }
+
         String body = "Hi " + (user.getName() == null ? "" : user.getName()) + ",\n\n" +
             "Please click the link below to confirm your email address:\n" + link + "\n\n" +
             "If you did not request this, please ignore this email.";

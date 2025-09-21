@@ -3,4 +3,4 @@ services:
     image: 'redis:latest'
     ports:
       - "6379:6379"
-    container_name: redis-auth-api
+    container_name: redis-v-disk-api

@@ -26,3 +26,12 @@ jwt:
   issuer: ${JWT_ISSUER:v-disk}
   ttl:
     seconds: ${JWT_TTL_SECONDS:3600}
+
+front:
+  baseurl: 'http://localhost:5173'
+
+app:
+  front:
+    base-url: 'http://localhost:5173'
+    verify-path: '/verify-email'
+    reset-path: '/reset-password'

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.v_disk.model.EmailVerificationToken;
 import com.v_disk.model.User;
@@ -21,14 +22,17 @@ public class EmailVerificationService {
     private final EmailVerificationTokenRepository tokenRepo;
     private final UserRepository userRepo;
     private final JavaMailSender mailSender;
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(EmailVerificationService.class);
 
     
     @Value("${app.email.from:${spring.mail.username:no-reply@local}}")
     private String fromAddress;
 
-   
-    @Value("${app.email.verify.url:http://localhost:8080/auth/verify-email}")
-    private String verifyUrl;
+    @Value("${app.front.base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
+
+    @Value("${app.front.verify-path:/verify-email}")
+    private String verifyPath;
 
     public EmailVerificationService(EmailVerificationTokenRepository tokenRepo, UserRepository userRepo, JavaMailSender mailSender) {
         this.tokenRepo = tokenRepo;
@@ -56,17 +60,43 @@ public class EmailVerificationService {
         msg.setTo(user.getEmail());
         msg.setFrom(fromAddress);
         msg.setSubject("Confirme seu e-mail");
-        String link = verifyUrl + "?token=" + token.getToken();
-        String body = "Olá " + (user.getName() == null ? "" : user.getName()) + ",\n\n" +
-                "Clique no link abaixo para confirmar seu e-mail:\n" + link + "\n\n" +
-                "Se não foi você, ignore esta mensagem.";
+    String link = UriComponentsBuilder.fromUriString(frontendBaseUrl)
+        .path(verifyPath)
+        .queryParam("token", token.getToken())
+        .toUriString();
+        String body = "Hi " + (user.getName() == null ? "" : user.getName()) + ",\n\n" +
+            "Please click the link below to confirm your email address:\n" + link + "\n\n" +
+            "If you did not request this, please ignore this email.";
         msg.setText(body);
         mailSender.send(msg);
     }
 
     
     public VerificationStatus verifyToken(String tokenStr) {
+        logger.info("Verifying token lookup for token='{}' (len={})", tokenStr, tokenStr == null ? 0 : tokenStr.length());
+
+        // Try direct lookup first
         Optional<EmailVerificationToken> opt = tokenRepo.findByToken(tokenStr);
+        logger.info("Direct token lookup present={}", opt.isPresent());
+
+        // If not found, try decoding + sanitizing common email pitfalls (trailing dot, whitespace)
+        if (opt.isEmpty() && tokenStr != null) {
+            try {
+                String decoded = java.net.URLDecoder.decode(tokenStr, java.nio.charset.StandardCharsets.UTF_8.name());
+                decoded = decoded.trim();
+                if (decoded.endsWith(".")) {
+                    decoded = decoded.substring(0, decoded.length() - 1);
+                }
+                if (!decoded.equals(tokenStr)) {
+                    logger.info("Trying decoded/sanitized token='{}' (len={})", decoded, decoded.length());
+                    opt = tokenRepo.findByToken(decoded);
+                    logger.info("Decoded token lookup present={}", opt.isPresent());
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to decode token string: {}", e.getMessage());
+            }
+        }
+
         if (opt.isEmpty()) return VerificationStatus.NOT_FOUND;
         EmailVerificationToken token = opt.get();
         if (token.getExpiresAt() == null || token.getExpiresAt().isBefore(Instant.now())) {

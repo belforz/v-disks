@@ -2,6 +2,8 @@ package com.v_disk.model;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -9,7 +11,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Order {
     private String id;
     private String userId;
-    private List<String> vinylIds;
+    private List<com.v_disk.model.OrderItem> items;
     private Integer qt;
     private String paymentId;
     private Boolean isPaymentConfirmed;
@@ -25,8 +27,8 @@ public class Order {
        return userId;
    }
 
-   public List<String> getVinylIds() {
-       return vinylIds;
+   public List<com.v_disk.model.OrderItem> getItems() {
+       return items;
    }
 
    public Integer getQt() {
@@ -61,8 +63,11 @@ public class Order {
        this.userId = userId;
    }
 
-   public void setVinylIds(List<String> vinylIds) {
-       this.vinylIds = vinylIds;
+   public void setItems(List<com.v_disk.model.OrderItem> items) {
+       this.items = items;
+       if (items != null) {
+           this.qt = items.stream().filter(Objects::nonNull).map(item -> Optional.ofNullable(item.getQuantity()).orElse(1)).reduce(0, Integer::sum);
+       }
    }
 
    public void setQt(Integer qt) {

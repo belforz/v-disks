@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -214,9 +215,9 @@ public class AuthController {
     // }
     // }
 
-    @PostMapping("/verify-email")
+    @RequestMapping(value = "/verify-email", method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<ResponseJSON<String>> verifyEmail(@RequestParam(required = false) String token,
-            @RequestBody(required = false) Map<String, String> body) {
+        @RequestBody(required = false) Map<String, String> body) {
         String t = token;
         if ((t == null || t.isBlank()) && body != null) {
             t = body.get("token");

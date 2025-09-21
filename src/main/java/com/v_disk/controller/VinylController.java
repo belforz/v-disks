@@ -3,6 +3,7 @@ package com.v_disk.controller;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,7 +25,6 @@ import com.v_disk.repository.VinylRepository;
 import com.v_disk.utils.ResponseJSON;
 
 import jakarta.validation.Valid;
-import org.springframework.data.domain.PageRequest;
 
 @RestController
 @RequestMapping("/api/vinyls")
@@ -56,15 +56,12 @@ public class VinylController {
     }
 
     @GetMapping("/principal")
-    public ResponseEntity<ResponseJSON<Vinyl>> getPrincipal(@RequestParam String vinylId,
-            @RequestParam boolean isPrincipal) {
-        if (isPrincipal) {
-            Vinyl v = repo.findById(vinylId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vinyl not found"));
-            return ResponseEntity.ok(new ResponseJSON<>("Principal vinyl found", v));
-        } else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vinyl is not principal");
+    public ResponseEntity<ResponseJSON<List<Vinyl>>> getPrincipal() {
+        List<Vinyl> result = repo.findByIsPrincipalTrue(true);
+        if (result == null || result.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Vinyl not found");
         }
+        return ResponseEntity.ok(new ResponseJSON<>("ok", result));
     }
 
     @PostMapping

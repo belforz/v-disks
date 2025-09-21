@@ -9,7 +9,9 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -20,9 +22,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final AccessDeniedHandler accessDeniedHandler;
+    private final AuthenticationEntryPoint authenticationEntryPoint;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, AccessDeniedHandler accessDeniedHandler, AuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.accessDeniedHandler = accessDeniedHandler;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Bean
@@ -39,26 +45,28 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/vinyls", "/api/vinyls/**").permitAll()
                         .requestMatchers("/api/mail/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
-                        .requestMatchers("/api/checkout/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/**", "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/**", "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/**", "/api/users/**").permitAll()
                         .requestMatchers("/reset-password.html", "/reset-password.html/**").permitAll()
-
+                        .requestMatchers("/api/cart/**").permitAll()
+                        .requestMatchers("/error", "/error/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments", "/api/payments/**").permitAll()
                         // Admin-only
                         .requestMatchers(HttpMethod.POST, "/api/vinyls", "/api/vinyls/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/vinyls", "/api/vinyls/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/vinyls", "/api/vinyls/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/**", "/api/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users", "/api/users/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/users", "/api/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/users", "/api/users/**").hasRole("ADMIN")
 
 
                         // Protected endpoints (authenticated users)
-                        .requestMatchers("/api/cart/**").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
+                        .requestMatchers("/api/checkout/**").authenticated()
 
                         .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // Add custom handlers to log detailed info on 401/403
+                .exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler).authenticationEntryPoint(authenticationEntryPoint));
 
         return http.build();
     }

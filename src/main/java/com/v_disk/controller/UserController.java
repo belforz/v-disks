@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,11 +23,11 @@ import org.springframework.web.server.ResponseStatusException;
 import com.v_disk.dto.user.UserCreateDTO;
 import com.v_disk.dto.user.UserResponseDTO;
 import com.v_disk.dto.user.UserUpdateDTO;
+import com.v_disk.model.EmailVerificationToken;
 import com.v_disk.model.User;
 import com.v_disk.repository.UserRepository;
-import com.v_disk.utils.ResponseJSON;
 import com.v_disk.service.EmailVerificationService;
-import com.v_disk.model.EmailVerificationToken;
+import com.v_disk.utils.ResponseJSON;
 
 import jakarta.validation.Valid;
 
@@ -37,6 +37,7 @@ public class UserController {
     private final UserRepository repo;
     private final PasswordEncoder passwordEncoder;
     private final EmailVerificationService emailVerificationService;
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(UserController.class);
 
     public UserController(UserRepository repo, PasswordEncoder passwordEncoder,
             EmailVerificationService emailVerificationService) {
@@ -119,6 +120,7 @@ public class UserController {
 
     @GetMapping("/verify")
     public ResponseEntity<ResponseJSON<String>> verify(@RequestParam String token) {
+        logger.info("Received verify request (query) for token={}", token);
         com.v_disk.service.VerificationStatus status = emailVerificationService.verifyToken(token);
         switch (status) {
             case SUCCESS:
@@ -130,6 +132,13 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new ResponseJSON<>("error", "invalid_or_not_found"));
         }
+    }
+
+    @GetMapping("/verify/{token}")
+    public ResponseEntity<ResponseJSON<String>> verifyPath(@PathVariable String token) {
+        logger.info("Received verify request (path) for token={}", token);
+        // Accept path-style token links and delegate to the query-param handler
+        return verify(token);
     }
 
     @PatchMapping("/{id}")

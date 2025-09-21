@@ -37,7 +37,7 @@ public class EmailSender {
 
     public EmailSender(UserRepository repo,
             EmailVerificationTokenRepository tokenRepo,
-            @Value("${app.frontend.url:http://localhost:8080/reset-password.html}") String frontendUrl,
+            @Value("${app.front.base-url:http://localhost}") String frontendUrl,
             @Value("${app.password_reset.ttl_seconds:3600}") long tokenTtlSeconds,
             @Value("${spring.mail.username:no-reply@v-disk.local}") String mailFrom) {
         this.repo = repo;
@@ -60,8 +60,8 @@ public class EmailSender {
         }
         SimpleMailMessage msg = new SimpleMailMessage();
         msg.setTo(to);
-        msg.setSubject("Bem-vindo ao v-disk!");
-        msg.setText("Seu cadastro foi realizado com sucesso.");
+        msg.setSubject("Welcome to V-disk!");
+        msg.setText("Your request has been validated.");
         msg.setFrom("macedobeiramar@gmail.com");
         mailSender.send(msg);
         return ResponseEntity.ok(new ResponseJSON<>("success", "OK"));
@@ -100,13 +100,12 @@ public class EmailSender {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ResponseJSON<>("error", "User not found"));
         }
-        
+
         try {
             tokenRepo.deleteByUserId(user.getId());
         } catch (Exception ignored) {
         }
 
-        
         String token = UUID.randomUUID().toString();
         EmailVerificationToken t = new EmailVerificationToken();
         t.setUserId(user.getId());
@@ -119,12 +118,12 @@ public class EmailSender {
 
         SimpleMailMessage msg = new SimpleMailMessage();
         msg.setTo(user.getEmail());
-        msg.setSubject("Alteração de Senha");
-        msg.setText("Clique no link abaixo para alterar sua senha:\n\n" + link
-                + "\n\nSe você não solicitou, ignore este e-mail.");
+        msg.setSubject("Password change");
+        msg.setText("Click on the link below to change your actual password:\n\n" + link
+                + "\n\nIf you havent requested for, please ignore this email .");
         msg.setFrom(mailFrom);
         mailSender.send(msg);
-        return ResponseEntity.ok(new ResponseJSON<>("success", "Email de alteração de senha enviado"));
+        return ResponseEntity.ok(new ResponseJSON<>("success", "Changing email has been sent"));
     }
 
 }

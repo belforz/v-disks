@@ -61,23 +61,18 @@ public class EmailVerificationService {
         msg.setFrom(fromAddress);
         msg.setSubject("Confirme seu e-mail");
 
-        // Normalize and build the verification link safely.
-        // Cases to handle:
-        //  - verifyPath is an absolute URL (starts with http/https) -> use it directly
-        //  - verifyPath is an absolute path (/verify-email) -> combine with frontendBaseUrl without duplicating slashes
-        //  - verifyPath accidentally contains the frontendBaseUrl already -> avoid double prefixing
         String link;
         try {
             String trimmedVerify = verifyPath == null ? "" : verifyPath.trim();
             String trimmedBase = frontendBaseUrl == null ? "" : frontendBaseUrl.trim();
 
-            // If verifyPath looks like a full URL, use it directly but ensure token param is appended
+            
             if (trimmedVerify.matches("(?i)^https?://.*")) {
                 link = UriComponentsBuilder.fromUriString(trimmedVerify)
                     .queryParam("token", token.getToken())
                     .toUriString();
             } else {
-                // If verifyPath already contains the base URL, strip it out to avoid duplication
+                
                 if (!trimmedBase.isEmpty() && trimmedVerify.startsWith(trimmedBase)) {
                     trimmedVerify = trimmedVerify.substring(trimmedBase.length());
                 }

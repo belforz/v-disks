@@ -8,6 +8,9 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.HashMap;
 
+
+// no longer utilized
+
 @Service
 public class CheckoutService {
 

@@ -75,7 +75,6 @@ public class OrderController {
     public ResponseEntity<ResponseJSON<OrderResponseDTO>> create(@RequestBody @Valid OrderCreateDTO dto) {
         Order o = new Order();
         o.setUserId(dto.userId());
-        // set items (if provided). If client sent vinyls list previously, it should be adapted by client.
         if (dto.items() != null) {
             o.setItems(dto.items());
         }
@@ -87,12 +86,12 @@ public class OrderController {
         } else {
             o.setQt(0);
         }
-        // Optional fields from DTO
+       
         if (dto.paymentId() != null) o.setPaymentId(dto.paymentId());
         if (dto.isPaymentConfirmed() != null) o.setIsPaymentConfirmed(dto.isPaymentConfirmed());
         if (dto.orderStatus() != null) o.setOrderStatus(dto.orderStatus());
         o.setCreatedAt(Instant.now());
-        // ensure items have vinyl snapshot (title, artist, price, coverPath) by fetching vinyls
+    
         if (o.getItems() != null) {
             for (OrderItem it : o.getItems()) {
                 if ((it.getTitle() == null || it.getTitle().isBlank()) && it.getVinylId() != null) {

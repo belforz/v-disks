@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/cart/**").permitAll()
                         .requestMatchers("/error", "/error/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/payments", "/api/payments/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/orders/by-customer/{userId}").permitAll()
                         // Admin-only
                         .requestMatchers(HttpMethod.POST, "/api/vinyls", "/api/vinyls/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/vinyls", "/api/vinyls/**").hasRole("ADMIN")
